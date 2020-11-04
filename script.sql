@@ -27,4 +27,5 @@ VALUES ("whatsapp:+535643344");
 INSERT INTO socialmedia (user_id, instagram)
 VALUES (3, "IGhandle3");
 
+
 -- SELECT users.id, phone_number, instagram FROM users JOIN socialmedia	ON (socialmedia.id = users.id);
