@@ -19,7 +19,9 @@ def enter_giveaway():
     instagram_response = request.form.get('Body')   
 
     try:
-        conn = sqlite3.connect('/Users/diane/Documents/projects/giveawayform/app.db')
+        conn = sqlite3.connect('app.db')
+        print("Successful connection!")
+
         cur = conn.cursor()
         query = """SELECT EXISTS (SELECT 1 FROM users WHERE phone_number = (?))"""
         cur.execute(query, [sender_phone_number])      
@@ -32,14 +34,11 @@ def enter_giveaway():
             cur = conn.cursor()
             cur.execute(insert_users, (sender_phone_number,))
             conn.commit()
-            query = """SELECT id FROM users WHERE phone_number = (?)"""
-            cur.execute(query, [sender_phone_number])      
-            query_result = cur.fetchone()
-            user_id = query_result[0]
+            recent_userid = cur.lastrowid
             insert_socialmedia = ''' INSERT INTO socialmedia (user_id, instagram)
                         VALUES(?, ?) '''
             cur = conn.cursor()
-            cur.execute(insert_socialmedia, (user_id, instagram_response,))
+            cur.execute(insert_socialmedia, (recent_userid, instagram_response,))
             conn.commit()
             return respond(f'Thanks for joining the giveaway! If your username changed, please respond with your new username.')            
         
@@ -67,15 +66,17 @@ def enter_giveaway():
 def generate_winner():
     number = 0
     try:
-        conn = sqlite3.connect('/Users/diane/Documents/projects/giveawayform/app.db')
+        conn = sqlite3.connect('app.db')
         cur = conn.cursor()
         query = """SELECT COUNT (phone_number) FROM users;"""
         cur.execute(query)      
         total_entries = cur.fetchone()
         total_entries = total_entries[0]
-        generated_number = random.randrange(1, total_entries+1)
+        generated_number = random.randrange(0, total_entries)
+        # generated_number = 5
         cur = conn.cursor()
-        look_up_winner_query = """SELECT users.id, phone_number, instagram FROM users JOIN socialmedia ON (socialmedia.id = users.id) WHERE user_id = (?);"""
+        # more robust way because databases don't always generate ids as a sequence of numbers
+        look_up_winner_query = """SELECT users.id, phone_number, instagram FROM users JOIN socialmedia ON (socialmedia.id = users.id) ORDER BY users.id LIMIT 1 OFFSET (?);"""        
         cur.execute(look_up_winner_query, [generated_number]) 
         winner_entry = cur.fetchone()
     except Error as e:
@@ -88,7 +89,7 @@ def generate_winner():
 @app.route("/")
 def viewentries():
     try:
-        conn = sqlite3.connect('/Users/diane/Documents/projects/giveawayform/app.db')
+        conn = sqlite3.connect('app.db')
         cur = conn.cursor()
         query = """SELECT users.id, phone_number, instagram FROM users JOIN socialmedia	ON (socialmedia.id = users.id);"""
         cur.execute(query)      
